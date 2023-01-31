@@ -3,9 +3,8 @@ from model import ObjTarget, ModelStream
 
 def vantage_main(debug=False):
     ModelStream.init_model(
-        "../data/yolov3names.txt", 
-        "../data/yolov3.cfg", 
-        "../data/yolov3.weights"
+        "../data/coco.names", 
+        "../data/yolov5s.onnx"
     )
 
     targets = [
@@ -13,7 +12,7 @@ def vantage_main(debug=False):
     ]
     model = ModelStream(None, targets)
 
-    frame = cv.imread("../data/person.jpg")
+    frame = cv.imread("../data/tennis.jpg")
     frame = cv.resize(frame, (416, 416))
     model.proc_frame(image=frame)
 

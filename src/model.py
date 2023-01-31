@@ -20,14 +20,10 @@ class ModelStream(object):
     yolo_out = None
 
     @staticmethod
-    def init_model(ynames, yconfig, yweights):
-        ModelStream.yolo_names = open(ynames).read().strip().split('\n')
-        ModelStream.yolo = cv.dnn.readNetFromDarknet(yconfig, yweights)
-        ModelStream.yolo.setPreferableBackend(cv.dnn.DNN_BACKEND_OPENCV)
-
-        ln = ModelStream.yolo.getLayerNames()
-        ModelStream.yolo_out = [ln[i - 1] 
-            for i in ModelStream.yolo.getUnconnectedOutLayers()]
+    def init_model(names, weights):
+        ModelStream.yolo_names = open(names).read().strip().split('\n')
+        ModelStream.yolo = cv.dnn.readNet(weights)
+        ModelStream.yolo_out = ModelStream.yolo.getUnconnectedOutLayersNames()
 
     @staticmethod
     def get_name(class_id):
@@ -52,10 +48,10 @@ class ModelStream(object):
             frame = image
         else:
             _, frame = self.source.read()
-        frame = cv.resize(frame, (416, 416))
+        frame = cv.resize(frame, (640, 640))
 
         blob = cv.dnn.blobFromImage(
-            frame, 1.0, (416, 416), (0,0,0), swapRB=True, crop=False)
+            frame, 1.0, (640, 640), (0,0,0), swapRB=True, crop=False)
 
         ModelStream.yolo.setInput(blob)
         outs = ModelStream.yolo.forward(ModelStream.yolo_out)
