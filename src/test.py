@@ -44,8 +44,15 @@ def post_process(image, outputs):
         (left, top, width, height) = box[:4]
 
         cv.rectangle(image, (left, top), (left+width, top+height), (0, 255, 0), 2)
-
+        label = "{}:{:.2f}".format(names[class_ids[i]], confidences[i])
+        draw_label(image, label, left, top)
     return image
+
+def draw_label(im, label, x, y):
+    text_size = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.7, 1)
+    (dim, baseline) = text_size[:2]
+    cv.rectangle(im, (x,y), (x+dim[0], y+dim[1]+baseline), (0,0,0), cv.FILLED)
+    cv.putText(im, label, (x,y+dim[1]), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1, cv.LINE_AA)
 
 if __name__ == '__main__':
     names = open("../data/coco.names").read().strip().split('\n')
