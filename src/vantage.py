@@ -1,30 +1,15 @@
 import cv2 as cv
-from model import ObjTarget, ModelStream
+from detector import Detector
 
 def vantage_main(debug=False):
-    ModelStream.init_model(
-        "../data/coco.names", 
-        "../data/yolov5s.onnx"
-    )
-
-    targets = [
-        ObjTarget(ModelStream.get_cid("person"))
-    ]
-    model = ModelStream(None, targets)
-
+    
     frame = cv.imread("../data/tennis.jpg")
-    frame = cv.resize(frame, (416, 416))
-    model.proc_frame(image=frame)
+    
+    model = Detector("../data/coco.names", "../data/yolov5s.onnx")
+    img = model.detect_frame(frame)
 
-    for det in model.current_detections:
-        cid = det[0]
-        (x, y, w, h) = det[1:4]
-        cv.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        text = "{} ({}): {:.4f}".format(det[0], cid, det[2])
-        print(text)
-        cv.putText(
-            frame, text, (x, y-5), cv.FONT_HERSHEY_SIMPLEX, 
-            0.5, (0, 255, 0), 1)
+    cv.imshow('Output', img)
+    cv.waitKey(0)
 
     cv.imshow("frame", frame)
     cv.waitKey(0)

@@ -81,18 +81,3 @@ def draw_label(im, label, x, y):
     (dim, baseline) = text_size[:2]
     cv.rectangle(im, (x,y), (x+dim[0], y+dim[1]+baseline), (0,0,0), cv.FILLED)
     cv.putText(im, label, (x,y+dim[1]), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1, cv.LINE_AA)
-
-if __name__ == '__main__':
-#   names = open("../data/coco.names").read().strip().split('\n')
-    frame = cv.imread("../data/tennis.jpg")
-
-#   net = cv.dnn.readNet("../data/yolov5s.onnx")
-#   detections = pre_process(frame, net)
-#   img = post_process(frame.copy(), detections)
-
-    model = Detector("../data/coco.names", "../data/yolov5s.onnx")
-    img = model.detect_frame(frame)
-
-    cv.imshow('Output', img)
-    cv.waitKey(0)
-    
