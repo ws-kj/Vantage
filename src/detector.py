@@ -2,6 +2,15 @@ import cv2 as cv
 import numpy as np
 from dataclasses import dataclass
 
+IMAGE_SIZE = 640
+
+@dataclass
+class Target:
+    class_id: int
+    conf:     float
+    prox:     float
+    time:     int
+
 @dataclass
 class Detection:
     box:   list[int]
@@ -18,9 +27,18 @@ class Detector(object):
         self.confidence = confidence
         self.id_confidence = id_confidence
         self.nms_confidence = nms_confidence
+
+        self.targets = []       #detection confs
+        self.t_frames  = [0] * 80  #frame count of active detections
+        self.t_active  = [0] * 80  #quick lookup for detections
     
+    def add_target(self, target, callback):
+        if self.t_active[target.class_id] == 0:
+            self.targets.append((target, callback))
+            self.t_active[target.class_id] = 1
+
     def detect_frame(self, frame):
-        blob = cv.dnn.blobFromImage(frame, 1/255, (640, 640), [0,0,0], 1, crop=False)
+        blob = cv.dnn.blobFromImage(frame, 1/255, (IMAGE_SIZE, IMAGE_SIZE), [0,0,0], 1, crop=False)
         self.net.setInput(blob)
 
         outputs = self.net.forward(self.net.getUnconnectedOutLayersNames())
@@ -35,8 +53,8 @@ class Detector(object):
         rows = outputs[0].shape[1]
         image_height, image_width = frame.shape[:2]
 
-        x_factor = image_width / 640
-        y_factor = image_height / 640
+        x_factor = image_width / IMAGE_SIZE
+        y_factor = image_height / IMAGE_SIZE
 
         for r in range(rows):
             row = outputs[0][0][r]
@@ -59,7 +77,13 @@ class Detector(object):
 
         indices = cv.dnn.NMSBoxes(boxes, confidences, self.confidence, self.nms_confidence)
         detections = []
+        detected_ids = []
         for i in indices:
+            cid = class_ids[i]
+            detected_ids.append(cid)
+            if self.t_active[cid] == 1:
+                print("target detected: " + self.get_name(cid) + ", cid: " + str(cid))
+                self.t_frames[cid] += 1
             detections.append(Detection(boxes[i][:4], class_ids[i], confidences[i]))
 
             box = boxes[i]
@@ -69,12 +93,33 @@ class Detector(object):
             label = "{}:{:.2f}".format(self.get_name(class_ids[i]), confidences[i])
             draw_label(frame, label, left, top)
 
+        inactive = [i for i, x in enumerate(self.t_active) if x==1 ]#and x not in detected_ids]
+        for cid in inactive:
+            if cid not in detected_ids:
+                print(cid)
+                self.t_frames[cid] = 0
+
+        self.try_callbacks()
+
         return frame
 
+    def try_callbacks(self):  
+        current = [i for i, x in enumerate(self.t_active) if x == 1]
+        for c in current:
+            target, callback = [t for t in self.targets if t[0].class_id == c][0]
+            if self.t_frames[c] >= target.time:   
+                callback()
+                
     def get_name(self, class_id):
         if class_id >= len(self.names) or class_id < 0:
             return "unknown"
         return self.names[class_id]
+
+    def get_cid(self, name):
+        try:
+            return self.names.index(name)
+        except ValueError:
+            return 0
 
 def draw_label(im, label, x, y):
     text_size = cv.getTextSize(label, cv.FONT_HERSHEY_SIMPLEX, 0.7, 1)
