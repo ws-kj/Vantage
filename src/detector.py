@@ -10,6 +10,7 @@ class Target:
     conf:     float
     prox:     float
     time:     int
+    cooldown: int
 
 @dataclass
 class Detection:
@@ -93,22 +94,22 @@ class Detector(object):
             label = "{}:{:.2f}".format(self.get_name(class_ids[i]), confidences[i])
             draw_label(frame, label, left, top)
 
-        inactive = [i for i, x in enumerate(self.t_active) if x==1 ]#and x not in detected_ids]
+        inactive = [i for i, x in enumerate(self.t_active) if x==1 ]
         for cid in inactive:
             if cid not in detected_ids:
                 print(cid)
                 self.t_frames[cid] = 0
 
-        self.try_callbacks()
+        self.try_callbacks(detections)
 
         return frame
 
-    def try_callbacks(self):  
+    def try_callbacks(self, detections):  
         current = [i for i, x in enumerate(self.t_active) if x == 1]
         for c in current:
             target, callback = [t for t in self.targets if t[0].class_id == c][0]
-            if self.t_frames[c] >= target.time:   
-                callback()
+            if self.t_frames[c] >= target.time:  
+                callback([d for d in detections if d.class_id == c])
                 
     def get_name(self, class_id):
         if class_id >= len(self.names) or class_id < 0:
