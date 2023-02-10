@@ -1,8 +1,10 @@
 import cv2 as cv
 import numpy as np
+import time
 from dataclasses import dataclass
 
 IMAGE_SIZE = 640
+N_CLASSES = 80
 
 @dataclass
 class Target:
@@ -28,15 +30,25 @@ class Detector(object):
         self.confidence = confidence
         self.id_confidence = id_confidence
         self.nms_confidence = nms_confidence
-
-        self.targets = []       #detection confs
-        self.t_frames  = [0] * 80  #frame count of active detections
-        self.t_active  = [0] * 80  #quick lookup for detections
+ 
+        self.targets  = [] #detection confs
+        self.t_frames = [0] * N_CLASSES  #frame count of active detections
+        self.t_active = [0] * N_CLASSES  #quick lookup for detections
+        self.t_cds    = [0] * N_CLASSES #cooldown lookup
     
     def add_target(self, target, callback):
         if self.t_active[target.class_id] == 0:
             self.targets.append((target, callback))
             self.t_active[target.class_id] = 1
+
+    def start_capture(self, cap):
+        if len(self.targets) == 0 or not cap.isOpened():
+            return
+
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if ret:
+                self.detect_frame(frame)
 
     def detect_frame(self, frame):
         blob = cv.dnn.blobFromImage(frame, 1/255, (IMAGE_SIZE, IMAGE_SIZE), [0,0,0], 1, crop=False)
@@ -108,8 +120,9 @@ class Detector(object):
         current = [i for i, x in enumerate(self.t_active) if x == 1]
         for c in current:
             target, callback = [t for t in self.targets if t[0].class_id == c][0]
-            if self.t_frames[c] >= target.time:  
+            if self.t_frames[c] >= target.time and time.time()-self.t_cds[c] >= target.cooldown:  
                 callback([d for d in detections if d.class_id == c])
+                self.t_cds[c] = time.time()
                 
     def get_name(self, class_id):
         if class_id >= len(self.names) or class_id < 0:
