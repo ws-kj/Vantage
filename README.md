@@ -1,2 +1,1 @@
 # Vantage
-CV for everyone
